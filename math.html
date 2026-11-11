@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Glider Trajectory Simulator | 紙飛機氣動與軌跡模擬器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#09090B; --bg2:#121316; --text:#FAFAFA; --muted:#A1A1AA; --line:rgba(255,255,255,.08);
+  --accent:#8B9CFF; --accent2:#5EEAD4; --warn:#FDA4AF;
+  --glass:rgba(255,255,255,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg)}
+body{
+  font-family:'Inter','Noto Sans TC',system-ui,sans-serif;color:var(--muted);min-height:100vh;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(139,156,255,.20), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 85% 0%, rgba(94,234,212,.07), transparent 70%),
+    var(--bg);
+  background-repeat:no-repeat;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1480px;margin:0 auto;padding:72px 24px 96px}
+header{text-align:center;margin-bottom:56px}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--muted)}
+h1{font-size:clamp(30px,4.6vw,56px);font-weight:800;letter-spacing:-.04em;line-height:1.08;color:var(--text);margin:20px 0 12px}
+h1 span{background:linear-gradient(90deg,#fff,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:15px;max-width:680px;margin:0 auto;line-height:1.7}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr) 320px;gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.card{
+  background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--line);border-radius:16px;padding:22px;
+  transition:all .3s ease-out;position:relative;
+}
+.card:hover{transform:translateY(-2px);border-color:rgba(139,156,255,.28);box-shadow:0 0 40px -12px rgba(139,156,255,.35)}
+.card h2{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;letter-spacing:-.01em;color:var(--text);margin-bottom:18px}
+.card h2 svg{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.card h2 small{font-weight:400;color:var(--muted);font-size:11px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;background:var(--bg2);border:1px solid var(--line);border-radius:12px}
+.seg button{all:unset;cursor:pointer;text-align:center;padding:9px 6px;border-radius:9px;font-size:12px;font-weight:600;color:var(--muted);transition:all .3s ease-out}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:rgba(139,156,255,.16);color:var(--text);box-shadow:inset 0 0 0 1px rgba(139,156,255,.35)}
+.model-info{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.model-info div{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.model-info b{display:block;color:var(--text);font-weight:500;font-size:13px;margin-top:2px}
+.ctl{margin-bottom:18px}
+.ctl:last-child{margin-bottom:0}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;line-height:1.4;margin-bottom:8px}
+.ctl label em{font-style:normal;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px}
+.ctl .zh{display:block;font-size:11px;opacity:.7}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:rgba(255,255,255,.1);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 4px rgba(139,156,255,.25);transition:all .3s ease-out}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 4px rgba(139,156,255,.25)}
+input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 7px rgba(139,156,255,.3)}
+.btns{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;font-size:13px;font-weight:600;
+  border:1px solid var(--line);color:var(--text);background:var(--glass);transition:all .3s ease-out}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 28px -6px rgba(139,156,255,.5);border-color:rgba(139,156,255,.4)}
+.btn.primary{background:linear-gradient(180deg,#9AA8FF,#6F82F5);color:#09090B;border-color:transparent}
+.btn.primary:hover{box-shadow:0 0 34px -4px rgba(139,156,255,.75)}
+.canvas-card{padding:14px}
+.canvas-top{display:flex;justify-content:space-between;align-items:center;padding:6px 8px 14px;font-size:12px}
+.pill{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--muted)}
+.pill.live{color:var(--accent2);border-color:rgba(94,234,212,.3)}
+#stage{width:100%;height:520px;border-radius:12px;background:linear-gradient(180deg,#0d0e12,var(--bg2));border:1px solid var(--line);display:block}
+.legend{display:flex;gap:18px;flex-wrap:wrap;padding:14px 8px 4px;font-size:11.5px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:16px;height:2px;border-radius:2px;background:var(--accent)}
+.legend i.g{background:rgba(255,255,255,.35)}
+.legend i.a{background:var(--accent2)}
+.mono-list{display:flex;flex-direction:column;gap:2px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.row:last-child{border-bottom:0}
+.row span{color:var(--muted)}
+.row b{color:var(--text);font-weight:500;text-align:right}
+.formula{margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9;color:#C4C4CC}
+.max-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.max{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px;transition:all .3s ease-out}
+.max.done{border-color:rgba(94,234,212,.4);box-shadow:0 0 30px -10px rgba(94,234,212,.5)}
+.max small{display:block;font-size:11px;line-height:1.4}
+.max strong{display:block;margin-top:8px;font-size:24px;font-weight:700;letter-spacing:-.03em;color:var(--text);font-family:'JetBrains Mono',monospace}
+.max strong u{text-decoration:none;font-size:12px;color:var(--muted);margin-left:3px;font-weight:400}
+.note{font-size:11.5px;line-height:1.7;margin-top:12px}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:14px}
+.dot{width:7px;height:7px;border-radius:50%;background:#52525B;transition:all .3s}
+.dot.fly{background:var(--accent2);box-shadow:0 0 12px var(--accent2)}
+.dot.end{background:var(--warn)}
+@media(max-width:1180px){.grid{grid-template-columns:1fr 1fr}.col.mid{grid-column:1/-1;order:-1}}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.wrap{padding-top:48px}#stage{height:380px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B9CFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+    Calculus &amp; Aerodynamics · 微積分與氣動力學
+  </div>
+  <h1><span>Paper Glider</span> Trajectory Simulator</h1>
+  <p class="sub">紙飛機氣動與軌跡模擬器 — Euler Method (歐拉法) 數值積分，即時求解 <i>dv/dt</i> 並擷取函數極值 Apogee 與 Max Range。</p>
+</header>
+
+<main class="grid">
+  <!-- LEFT: Control Panel -->
+  <section class="col">
+    <div class="card">
+      <h2><svg viewBox="0 0 24 24"><path d="M2 12h6l2-7 4 14 2-7h6"/></svg>Aircraft Model <small>機型</small></h2>
+      <div class="seg" id="modelSeg">
+        <button class="on" data-m="dc03">DC-03</button>
+        <button data-m="susan">Susan</button>
+      </div>
+      <div class="model-info">
+        <div>S · Wing Area (翼面積)<b id="mS">—</b></div>
+        <div>m · Mass (質量)<b id="mM">—</b></div>
+        <div>C<sub>L0</sub> · Lift Coeff. (升力係數)<b id="mCL">—</b></div>
+        <div>C<sub>D0</sub> · Drag Coeff. (阻力係數)<b id="mCD">—</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Control Console <small>參數控制台</small></h2>
+      <div class="ctl"><label><div>Initial Velocity<span class="zh">初速 v₀</span></div><em id="vV"></em></label>
+        <input type="range" id="v0" min="1" max="15" step="0.1" value="6"></div>
+      <div class="ctl"><label><div>Launch Angle<span class="zh">發射角 θ₀</span></div><em id="aV"></em></label>
+        <input type="range" id="ang" min="-20" max="60" step="1" value="10"></div>
+      <div class="ctl"><label><div>Center of Gravity<span class="zh">重心位置 (% 翼弦, 純量)</span></div><em id="cV"></em></label>
+        <input type="range" id="cg" min="30" max="70" step="1" value="50"></div>
+      <div class="ctl"><label><div>Elevator Angle<span class="zh">升降舵角度 δₑ</span></div><em id="eV"></em></label>
+        <input type="range" id="el" min="-10" max="10" step="0.5" value="0"></div>
+    </div>
+
+    <div class="card">
+      <div class="btns">
+        <button class="btn primary" id="launch"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></svg>Launch 發射</button>
+        <button class="btn" id="reset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Reset</button>
+      </div>
+      <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">Ready · 待命</span></div>
+    </div>
+  </section>
+
+  <!-- CENTER: Canvas -->
+  <section class="col mid">
+    <div class="card canvas-card">
+      <div class="canvas-top">
+        <h2 style="margin:0"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15c3 0 4-8 8-8 2 0 3 3 5 3"/></svg>Trajectory Canvas <small>軌跡畫布</small></h2>
+        <div style="display:flex;gap:8px"><span class="pill" id="scalePill"></span><span class="pill live" id="tPill">t = 0.00 s</span></div>
+      </div>
+      <canvas id="stage"></canvas>
+      <div class="legend">
+        <span><i></i>Trajectory Trail 飛行軌跡</span>
+        <span><i class="a"></i>Apogee 最高點</span>
+        <span><i class="g"></i>Ground y = 0 地面</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21 7.5 13.5 2 9h7z"/></svg>Maxima Data <small>極值擷取 (觸地後結算)</small></h2>
+      <div class="max-grid">
+        <div class="max" id="maxA"><small>Apogee · 最高點 (函數極大值)<br>y<sub>max</sub> = max y(t)</small><strong id="apo">—<u>m</u></strong></div>
+        <div class="max" id="maxR"><small>Max Range · 最遠滑翔距離<br>x at y(t) = 0</small><strong id="rng">—<u>m</u></strong></div>
+      </div>
+      <p class="note">Apogee 於飛行中 <i>v<sub>y</sub></i> 由正轉負處（即 y′(t)=0）取得；Max Range 於觸地瞬間以線性內插求得，結果精準至小數點後兩位。</p>
+    </div>
+  </section>
+
+  <!-- RIGHT: Live Math Engine -->
+  <section class="col">
+    <div class="card">
+      <h2><svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg>Live Math Engine <small>即時數學引擎</small></h2>
+      <div class="mono-list">
+        <div class="row"><span>Δt · Time Step (時間步長)</span><b id="oDt">—</b></div>
+        <div class="row"><span>v<sub>x</sub> (水平速度)</span><b id="oVx">—</b></div>
+        <div class="row"><span>v<sub>y</sub> (垂直速度)</span><b id="oVy">—</b></div>
+        <div class="row"><span>|v| Speed (速率)</span><b id="oV">—</b></div>
+        <div class="row"><span>dv<sub>x</sub>/dt = a<sub>x</sub></span><b id="oAx">—</b></div>
+        <div class="row"><span>dv<sub>y</sub>/dt = a<sub>y</sub></span><b id="oAy">—</b></div>
+        <div class="row"><span>|dv/dt| (加速度大小)</span><b id="oA">—</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Aerodynamics <small>氣動量</small></h2>
+      <div class="mono-list">
+        <div class="row"><span>α<sub>eff</sub> · AoA (攻角)</span><b id="oAoA">—</b></div>
+        <div class="row"><span>C<sub>L</sub> (升力係數)</span><b id="oCL">—</b></div>
+        <div class="row"><span>C<sub>D</sub> (阻力係數)</span><b id="oCD">—</b></div>
+        <div class="row"><span>q · Dynamic Pressure (動壓)</span><b id="oQ">—</b></div>
+        <div class="row"><span>L · Lift (升力)</span><b id="oL">—</b></div>
+        <div class="row"><span>D · Drag (阻力)</span><b id="oD">—</b></div>
+        <div class="row"><span>x, y (位置)</span><b id="oXY">—</b></div>
+      </div>
+      <div class="formula">
+        q = ½ρv²,  L = qSC<sub>L</sub>,  D = qSC<sub>D</sub><br>
+        a<sub>x</sub> = (−L sinγ − D cosγ)/m<br>
+        a<sub>y</sub> = (L cosγ − D sinγ)/m − g<br>
+        v<sub>n+1</sub> = v<sub>n</sub> + a·Δt<br>
+        r<sub>n+1</sub> = r<sub>n</sub> + v<sub>n</sub>·Δt<br>
+        α<sub>eff</sub> = κ<sub>cg</sub>(cg−50) + κ<sub>e</sub>δ<sub>e</sub>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script>
+/* ===== Constants 常數 ===== */
+const PX_PER_M = 50;      // Scale 比例尺: 1 meter = 50 pixels (1 公尺 = 50 像素)
+const G = 9.8;            // Gravity 重力加速度 (m/s²)
+const RHO = 1.225;        // Air density 空氣密度 (kg/m³)
+const DT = 0.004;         // Δt Time step 時間步長 (s)
+const H0 = 1.5;           // Launch height 發射高度 (m)
+const MAX_T = 60;         // Safety timeout 安全上限 (s)
+const K_CG = -0.10;       // Linear map: CG → AoA (deg per % chord) 重心→攻角
+const K_EL = 0.60;        // Linear map: Elevator → AoA (deg per deg) 升降舵→攻角
+const CL_ALPHA = 0.08;    // dC_L / dα (per deg) 升力線斜率
+const K_IND = 0.50;       // Induced drag factor 誘導阻力係數
+
+/* ===== Aircraft Models 機型 ===== */
+const MODELS = {
+  dc03:  { name:'DC-03', S:0.022, m:0.006, CL0:0.45, CD0:0.10 },
+  susan: { name:'Susan', S:0.030, m:0.007, CL0:0.60, CD0:0.14 }
+};
+let model = MODELS.dc03;
+
+/* ===== DOM ===== */
+const $ = id => document.getElementById(id);
+const cv = $('stage'), ctx = cv.getContext('2d');
+let W = 0, H = 0;
+function resize(){
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  W = r.width; H = r.height; cv.width = W*d; cv.height = H*d; ctx.setTransform(d,0,0,d,0,0); draw();
+}
+$('scalePill').textContent = `1 m = ${PX_PER_M} px`;
+
+/* ===== State 狀態 ===== */
+let st = null, running = false, last = 0, rafId = 0;
+function newState(){
+  const v0 = +$('v0').value, th = +$('ang').value * Math.PI/180;
+  return { t:0, x:0, y:H0, vx:v0*Math.cos(th), vy:v0*Math.sin(th), ax:0, ay:0,
+           apo:H0, range:null, trail:[{x:0,y:H0}], n:0, aero:null, done:false };
+}
+
+/* ===== Aerodynamic mapping 氣動映射 (linear, simplified) ===== */
+function aero(v){
+  const cg = +$('cg').value, el = +$('el').value;
+  const alpha = K_CG*(cg-50) + K_EL*el;                         // deg
+  let CL = model.CL0 + CL_ALPHA*alpha;
+  CL = Math.max(-0.3, Math.min(1.4, CL));                       // stall clamp 失速限制
+  const dCL = CL - model.CL0;
+  const CD = model.CD0 + K_IND*dCL*dCL;
+  const q = 0.5*RHO*v*v;
+  return { alpha, CL, CD, q, L:q*model.S*CL, D:q*model.S*CD };
+}
+
+/* ===== Euler step 歐拉法單步 ===== */
+function step(s){
+  const v = Math.hypot(s.vx, s.vy) || 1e-9;
+  const a = aero(v);
+  const sg = s.vy/v, cgm = s.vx/v;                              // sinγ, cosγ
+  s.ax = (-a.L*sg - a.D*cgm)/model.m;
+  s.ay = ( a.L*cgm - a.D*sg)/model.m - G;
+  const px = s.x, py = s.y, pvy = s.vy;
+  s.x += s.vx*DT;  s.y += s.vy*DT;                              // r += v·Δt
+  s.vx += s.ax*DT; s.vy += s.ay*DT;                             // v += a·Δt
+  s.t += DT; s.n++; s.aero = a;
+  if (s.y > s.apo) s.apo = s.y;
+  if (s.n % 4 === 0) s.trail.push({x:s.x, y:s.y});
+  if (s.y <= 0){                                                // Ground contact 觸地
+    const f = py/(py - s.y);
+    s.range = px + f*(s.x - px); s.x = s.range; s.y = 0;
+    s.trail.push({x:s.x, y:0}); s.done = true;
+  } else if (s.t >= MAX_T){ s.range = s.x; s.done = true; }
+}
+
+/* ===== Main loop requestAnimationFrame ===== */
+function loop(ts){
+  if (!running) return;
+  const frame = Math.min((ts - last)/1000, 0.05); last = ts;
+  const n = Math.max(1, Math.round(frame/DT));
+  for (let i=0; i<n && !st.done; i++) step(st);
+  updatePanel(); draw();
+  if (st.done) finish(); else rafId = requestAnimationFrame(loop);
+}
+function finish(){
+  running = false;
+  $('apo').innerHTML = st.apo.toFixed(2) + '<u>m</u>';
+  $('rng').innerHTML = st.range.toFixed(2) + '<u>m</u>';
+  $('maxA').classList.add('done'); $('maxR').classList.add('done');
+  setStatus('end','Landed · 已觸地 (y ≤ 0)');
+}
+function setStatus(c,t){ $('dot').className = 'dot ' + c; $('statusTxt').textContent = t; }
+
+function launch(){
+  cancelAnimationFrame(rafId);
+  st = newState(); running = true; last = performance.now();
+  $('apo').innerHTML = '—<u>m</u>'; $('rng').innerHTML = '—<u>m</u>';
+  $('maxA').classList.remove('done'); $('maxR').classList.remove('done');
+  setStatus('fly','Flying · 飛行中 (Euler integration)');
+  rafId = requestAnimationFrame(loop);
+}
+function reset(){
+  cancelAnimationFrame(rafId); running = false; st = null;
+  ['oDt','oVx','oVy','oV','oAx','oAy','oA','oAoA','oCL','oCD','oQ','oL','oD','oXY'].forEach(i => $(i).textContent = '—');
+  $('apo').innerHTML = '—<u>m</u>'; $('rng').innerHTML = '—<u>m</u>';
+  $('maxA').classList.remove('done'); $('maxR').classList.remove('done');
+  $('tPill').textContent = 't = 0.00 s'; setStatus('','Ready · 待命'); draw();
+}
+
+/* ===== Live Math Engine DOM refresh ===== */
+function updatePanel(){
+  const s = st, a = s.aero; if (!a) return;
+  const f = (v,d=2) => v.toFixed(d);
+  $('oDt').textContent = f(DT,3) + ' s';
+  $('oVx').textContent = f(s.vx) + ' m/s';
+  $('oVy').textContent = f(s.vy) + ' m/s';
+  $('oV').textContent  = f(Math.hypot(s.vx,s.vy)) + ' m/s';
+  $('oAx').textContent = f(s.ax) + ' m/s²';
+  $('oAy').textContent = f(s.ay) + ' m/s²';
+  $('oA').textContent  = f(Math.hypot(s.ax,s.ay)) + ' m/s²';
+  $('oAoA').textContent = f(a.alpha) + '°';
+  $('oCL').textContent = f(a.CL,3);
+  $('oCD').textContent = f(a.CD,3);
+  $('oQ').textContent  = f(a.q) + ' Pa';
+  $('oL').textContent  = f(a.L,4) + ' N';
+  $('oD').textContent  = f(a.D,4) + ' N';
+  $('oXY').textContent = `${f(s.x)}, ${f(Math.max(0,s.y))} m`;
+  $('tPill').textContent = 't = ' + f(s.t) + ' s';
+}
+
+/* ===== Drawing 繪圖 ===== */
+const OX = 60, OB = 50;  // origin margin 原點邊界 (px)
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const cur = st ? st : null;
+  const px = cur ? cur.x*PX_PER_M : 0, py = cur ? cur.y*PX_PER_M : H0*PX_PER_M;
+  const camX = Math.max(0, px - W*0.7), camY = Math.max(0, py - (H - OB - 70));
+  const sx = x => OX + x*PX_PER_M - camX;
+  const sy = y => H - OB - y*PX_PER_M + camY;
+
+  // grid 網格 (every 1 m, major 5 m)
+  ctx.lineWidth = 1; ctx.font = '10px "JetBrains Mono",monospace'; ctx.textAlign = 'center';
+  const m0 = Math.floor((camX - OX)/PX_PER_M), m1 = Math.ceil((camX + W)/PX_PER_M);
+  for (let m=Math.max(0,m0); m<=m1; m++){
+    const X = sx(m), major = m%5===0;
+    ctx.strokeStyle = major ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.025)';
+    ctx.beginPath(); ctx.moveTo(X,0); ctx.lineTo(X,H); ctx.stroke();
+    if (major){ ctx.fillStyle = 'rgba(161,161,170,.7)'; ctx.fillText(m+' m', X, H-OB+22); }
+  }
+  ctx.textAlign = 'right';
+  for (let k=0; k<=Math.ceil((H+camY)/PX_PER_M); k++){
+    const Y = sy(k), major = k%5===0;
+    if (Y<0 || Y>H) continue;
+    ctx.strokeStyle = major ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.025)';
+    ctx.beginPath(); ctx.moveTo(0,Y); ctx.lineTo(W,Y); ctx.stroke();
+    if (major && k>0){ ctx.fillStyle = 'rgba(161,161,170,.7)'; ctx.fillText(k+' m', OX-8, Y+3); }
+  }
+  // ground 地面 y = 0
+  const gy = sy(0);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+  const gg = ctx.createLinearGradient(0,gy,0,gy+OB); gg.addColorStop(0,'rgba(255,255,255,.05)'); gg.addColorStop(1,'transparent');
+  ctx.fillStyle = gg; ctx.fillRect(0,gy,W,OB);
+
+  // launch marker 發射點
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(sx(0)-1, sy(H0), 2, H0*PX_PER_M);
+
+  if (!cur){ drawGlider(sx(0), sy(H0), +$('ang').value*Math.PI/180 * -1); return; }
+
+  // trail 軌跡線
+  const tr = cur.trail;
+  if (tr.length > 1){
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.shadowColor = 'rgba(139,156,255,.6)'; ctx.shadowBlur = 10;
+    ctx.strokeStyle = '#8B9CFF'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(sx(tr[0].x), sy(tr[0].y));
+    for (let i=1; i<tr.length; i++) ctx.lineTo(sx(tr[i].x), sy(tr[i].y));
+    if (!cur.done) ctx.lineTo(sx(cur.x), sy(cur.y));
+    ctx.stroke(); ctx.shadowBlur = 0;
+  }
+  // apogee marker 最高點
+  ctx.strokeStyle = '#5EEAD4'; ctx.fillStyle = '#5EEAD4'; ctx.lineWidth = 1;
+  const ay = sy(cur.apo);
+  ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(OX-camX>0?OX-camX:0, ay); ctx.lineTo(W, ay); ctx.globalAlpha = .35; ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]);
+  const apT = tr.reduce((b,p)=>p.y>b.y?p:b, tr[0]);
+  ctx.beginPath(); ctx.arc(sx(apT.x), sy(apT.y), 4, 0, 7); ctx.fill();
+  ctx.textAlign = 'left'; ctx.fillText('Apogee ' + cur.apo.toFixed(2) + ' m', sx(apT.x)+9, sy(apT.y)-8);
+  // landing marker 落點
+  if (cur.done){
+    ctx.strokeStyle = '#FDA4AF'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(sx(cur.x)-5, gy-5); ctx.lineTo(sx(cur.x)+5, gy+5); ctx.moveTo(sx(cur.x)+5, gy-5); ctx.lineTo(sx(cur.x)-5, gy+5); ctx.stroke();
+    ctx.fillStyle = '#FDA4AF'; ctx.textAlign = 'center'; ctx.fillText(cur.range.toFixed(2)+' m', sx(cur.x), gy-12);
+  } else {
+    drawGlider(sx(cur.x), sy(cur.y), Math.atan2(cur.vy, cur.vx)*-1);
+  }
+}
+function drawGlider(x,y,rot){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(139,156,255,.8)'; ctx.shadowBlur = 14;
+  ctx.beginPath(); ctx.moveTo(14,0); ctx.lineTo(-10,-6); ctx.lineTo(-6,0); ctx.lineTo(-10,6); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* ===== UI bindings 介面綁定 ===== */
+function labels(){
+  $('vV').textContent = (+$('v0').value).toFixed(1) + ' m/s';
+  $('aV').textContent = $('ang').value + '°';
+  $('cV').textContent = $('cg').value + ' %';
+  $('eV').textContent = (+$('el').value).toFixed(1) + '°';
+}
+['v0','ang','cg','el'].forEach(id => $(id).addEventListener('input', () => { labels(); if (!running && !st) draw(); }));
+function setModel(k){
+  model = MODELS[k];
+  $('mS').textContent = model.S.toFixed(3) + ' m²';
+  $('mM').textContent = (model.m*1000).toFixed(1) + ' g';
+  $('mCL').textContent = model.CL0.toFixed(2);
+  $('mCD').textContent = model.CD0.toFixed(2);
+  document.querySelectorAll('#modelSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === k));
+}
+document.querySelectorAll('#modelSeg button').forEach(b => b.addEventListener('click', () => setModel(b.dataset.m)));
+$('launch').addEventListener('click', launch);
+$('reset').addEventListener('click', reset);
+window.addEventListener('resize', resize);
+setModel('dc03'); labels(); resize();
+</script>
+</body>
+</html>
